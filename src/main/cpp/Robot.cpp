@@ -5,8 +5,53 @@
 #include "Robot.h"
 
 #include <frc2/command/CommandScheduler.h>
+#include <frc/Joystick.h>
+#include <frc/kinematics/SwerveDriveKinematics.h>
+#include <frc/controller/PIDController.h>
 
-void Robot::RobotInit() {}
+#include <ctre/phoenix/sensors/CANCoder.h>
+
+#include <rev/CANSparkMax.h>
+
+auto xy_speed = 1.0_mps;
+auto rot_speed = 1.0_rad_per_s;
+
+// I guess full power when we're 90 degrees off?
+const double ARBITRARY_VALUE = 1.0 / 90.0;
+
+frc::Joystick leftStick{0};
+frc::Joystick rightStick{1};
+
+// Locations for the swerve drive modules relative to the robot center.
+frc::Translation2d frontLeftLocation{9.5_in, 9.5_in};
+frc::Translation2d frontRightLocation{9.5_in, -9.5_in};
+frc::Translation2d backLeftLocation{-9.5_in, 9.5_in};
+frc::Translation2d backRightLocation{-9.5_in, -9.5_in};
+
+// Creating my kinematics object using the module locations.
+frc::SwerveDriveKinematics<4> kinematics{frontLeftLocation, frontRightLocation, backLeftLocation, backRightLocation};
+
+frc2::PIDController flAngleController{1.0, 0.0, 0.0};
+frc2::PIDController frAngleController{1.0, 0.0, 0.0};
+frc2::PIDController blAngleController{1.0, 0.0, 0.0};
+frc2::PIDController brAngleController{1.0, 0.0, 0.0};
+
+rev::CANSparkMax flMotor{25, rev::CANSparkMaxLowLevel::MotorType::kBrushless};
+rev::CANSparkMax frMotor{23, rev::CANSparkMaxLowLevel::MotorType::kBrushless};
+rev::CANSparkMax blMotor{21, rev::CANSparkMaxLowLevel::MotorType::kBrushless};
+rev::CANSparkMax brMotor{27, rev::CANSparkMaxLowLevel::MotorType::kBrushless};
+
+rev::SparkMaxAbsoluteEncoder flEncoder = flMotor.GetAbsoluteEncoder(rev::SparkMaxAbsoluteEncoder::Type::kDutyCycle);
+rev::SparkMaxAbsoluteEncoder frEncoder = frMotor.GetAbsoluteEncoder(rev::SparkMaxAbsoluteEncoder::Type::kDutyCycle);
+rev::SparkMaxAbsoluteEncoder blEncoder = blMotor.GetAbsoluteEncoder(rev::SparkMaxAbsoluteEncoder::Type::kDutyCycle);
+rev::SparkMaxAbsoluteEncoder brEncoder = brMotor.GetAbsoluteEncoder(rev::SparkMaxAbsoluteEncoder::Type::kDutyCycle);
+
+
+
+
+void Robot::RobotInit() {
+
+}
 
 /**
  * This function is called every 20 ms, no matter the mode. Use
@@ -17,7 +62,20 @@ void Robot::RobotInit() {}
  * LiveWindow and SmartDashboard integrated updating.
  */
 void Robot::RobotPeriodic() {
-  frc2::CommandScheduler::GetInstance().Run();
+  frc::ChassisSpeeds speeds{xy_speed * rightStick.GetX(), xy_speed * rightStick.GetY(), rot_speed * leftStick.GetX()};
+  auto [fl, fr, bl, br] = kinematics.ToSwerveModuleStates(speeds);
+
+  double flValue = flAngleController.Calculate(flEncoder.GetPosition(), (double)fl.angle.Degrees());
+  double frValue = frAngleController.Calculate(frEncoder.GetPosition(), (double)fr.angle.Degrees());
+  double blValue = blAngleController.Calculate(blEncoder.GetPosition(), (double)bl.angle.Degrees());
+  double brValue = brAngleController.Calculate(brEncoder.GetPosition(), (double)br.angle.Degrees());
+
+  flMotor.GetAbsoluteEncoder(rev::SparkMaxAbsoluteEncoder::Type::kDutyCycle)
+
+  flMotor.Set(flValue * ARBITRARY_VALUE);
+  frMotor.Set(frValue * ARBITRARY_VALUE);
+  blMotor.Set(blValue * ARBITRARY_VALUE);
+  brMotor.Set(brValue * ARBITRARY_VALUE);
 }
 
 /**
