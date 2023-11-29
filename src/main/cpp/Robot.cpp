@@ -70,8 +70,6 @@ void Robot::RobotPeriodic() {
   double blValue = blAngleController.Calculate(blEncoder.GetPosition(), (double)bl.angle.Degrees());
   double brValue = brAngleController.Calculate(brEncoder.GetPosition(), (double)br.angle.Degrees());
 
-  flMotor.GetAbsoluteEncoder(rev::SparkMaxAbsoluteEncoder::Type::kDutyCycle)
-
   flMotor.Set(flValue * ARBITRARY_VALUE);
   frMotor.Set(frValue * ARBITRARY_VALUE);
   blMotor.Set(blValue * ARBITRARY_VALUE);
